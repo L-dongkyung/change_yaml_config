@@ -1,0 +1,51 @@
+version: '2.4'
+services:
+  mongo:
+    image: mongo:6.0.3
+    restart: always
+    ports:
+    - 27017:27017
+    networks:
+    - optimserver  # This internal docker network can be configured at the end of the docker-compose.yml file.
+    volumes:
+    - ./mongo/db:/data/db  # Use volumes if you want your data to be persisted.
+
+  rabbitmq:
+    image: rabbitmq:3.10-alpine
+    restart: always
+    ports:
+    - "5671:5671"
+    - "5672:5672"  #amqp port
+    - "15671:15671"
+    - "15672:15672" # management web console
+    - "61613:61613" #stomp port
+    networks:
+    - optimserver
+    environment:
+    - RABBITMQ_DEFAULT_USER=decisionbrain  # Adapt the credentials to your needs
+    - RABBITMQ_DEFAULT_PASS=decisionbrain
+
+  master:
+    build: ./src/master/
+    image: megazone-project
+    ports:
+    - "8080:8080"
+    networks:
+    - optimserver
+    volumes:
+    - ./data/logs:/logs
+    - ./src/master:/app/src/app
+    - ./wait-for-it.sh:/app/wait-for-it.sh
+    - ./docker-compose.yml:/app/src/app/docker-compose.yml
+    cpu_percent: 75
+    mem_limit: 500M
+    links:
+    - rabbitmq
+    - mongo
+    command: |
+      sh -c "../wait-for-it.sh mongo:27017 --
+             python app/main.py"
+
+
+networks:
+  optimserver:

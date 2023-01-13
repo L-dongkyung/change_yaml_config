@@ -1,0 +1,51 @@
+networks:
+  optimserver: null
+services:
+  master:
+    build: ./src/master/
+    command: "sh -c \"../wait-for-it.sh mongo:27017 --\n       python app/main.py\"\
+      \n"
+    cpu_percent: 75
+    environment: []
+    image: megazone-project
+    links:
+    - rabbitmq
+    - mongo
+    mem_limit: 500M
+    networks:
+    - optimserver
+    ports:
+    - 8080:8080
+    volumes:
+    - ./data/logs:/logs
+    - ./src/master:/app/src/app
+    - ./wait-for-it.sh:/app/wait-for-it.sh
+    - ./docker-compose.yml:/app/src/app/docker-compose.yml
+  mongo:
+    environment: []
+    image: mongo:6.0.3
+    links: []
+    networks:
+    - optimserver
+    ports:
+    - 27017:27017
+    restart: always
+    volumes:
+    - ./mongo/db:/data/db
+  rabbitmq:
+    environment:
+    - RABBITMQ_DEFAULT_USER=decisionbrain
+    - RABBITMQ_DEFAULT_PASS=decisionbrain
+    image: rabbitmq:3.10-alpine
+    links: []
+    networks:
+    - optimserver
+    ports:
+    - 5671:5671
+    - 5672:5672
+    - 15671:15671
+    - 15672:15672
+    - 61613:61613
+    restart: always
+    volumes: []
+version: '2.4'
